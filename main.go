@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 )
@@ -8,13 +9,14 @@ import (
 func main() {
 	setupAPI()
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServeTLS(":8080", "server.crt", "server.key", nil))
 }
 
 func setupAPI() {
-	manager := NewManager()
+	manager := NewManager(context.Background())
 
 	http.Handle("/", http.FileServer(http.Dir("frontend")))
 	// call function on every access to /ws path
 	http.HandleFunc("/ws", manager.serveWS)
+	http.HandleFunc("/login", manager.loginHandler)
 }

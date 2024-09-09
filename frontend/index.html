@@ -1,82 +1,187 @@
 <!DOCTYPE html>
-
 <html lang="en">
-    <head>
-        <title>Websockets</title>
-    </head>
-    <body>
-        <div class="center">
-            <h1>Cool chat app</h1>
-            <h2 id="chat-header">Currently in chat: general</h2>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Chat App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 h-screen flex items-center justify-center">
+<div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+    <h1 class="text-3xl font-bold text-center text-indigo-600 mb-6">Cool Chat App</h1>
+    <h2 id="chat-header" class="text-xl font-semibold text-center text-gray-700 mb-4">Currently in chat: general</h2>
+    <h3 id="connection-header" class="text-sm font-medium text-center text-gray-500 mb-6">Connected to WebSocket: false</h3>
 
-            <form id="chatroom-selection">
-                <label for="chatroom">Chatroom:</label>
-                <input type="text" id="chatroom" name="chatroom"><br><br>
-                <input type="submit" value="Change chatroom">
-            </form>
-
-            <br>
-
-            <textarea class="messagearea" id="chatmessages" readonly name="chatmessages" rows="4" cols="50" placeholder="Welcome to chatroom"></textarea>
-
-            <br>
-
-            <form id="chatroom-message">
-                <label for="chatroom">Message:</label>
-                <input type="text" id="message" name="message"><br><br>
-                <input type="submit" value="Send message">
-            </form>
-
-            <script>
-                var selectedChat = "general";
-                function changeChatRoom() {
-                    var newchat = document.getElementById("chatroom");
-                    if (newchat != null && newchat.value != selectedChat){
-                        console.log(newchat);
-                    }
-                    return false;
-                }
-
-                function sendMessage() {
-                    var newmessage = document.getElementById("message");
-                    if (newmessage != null){
-                        conn.send(newmessage.value)
-                    }
-                    return false;
-                }
-
-                window.onload = function() {
-                    document.getElementById("chatroom-selection").onsubmit = changeChatRoom
-                    document.getElementById("chatroom-message").onsubmit = sendMessage
-
-                    if (window["WebSocket"]) {
-                        console.log("supports websockets")
-                        conn = new WebSocket("ws://" + document.location.host + "/ws")
-                        conn.onmessage = function (evt) {
-                            console.log(evt);
-                        }
-                    } else {
-                        alert("browser does not support websockets")
-                    }
-                }
-            </script>
-
-            <style type="text/css">
-                body {
-                    overflow: hidden;
-                    padding: 0;
-                    margin: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgb(66,56,56);
-                }
-                .center {
-                    margin: auto;
-                    width: 50%;
-                    border: 3px solid green;
-                    padding: 10px;
-                }
-            </style>
+    <form id="chatroom-selection" class="mb-6">
+        <div class="flex items-center space-x-2">
+            <input type="text" id="chatroom" name="chatroom" class="flex-grow px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter chatroom name">
+            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Change</button>
         </div>
-    </body>
+    </form>
+
+    <div class="mb-6">
+        <textarea id="chatmessages" readonly class="w-full h-40 p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Welcome to chatroom"></textarea>
+    </div>
+
+    <form id="chatroom-message" class="mb-6">
+        <div class="flex items-center space-x-2">
+            <input type="text" id="message" name="message" class="flex-grow px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type your message...">
+            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">Send</button>
+        </div>
+    </form>
+
+    <div class="border-t border-gray-200 pt-6">
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                <input type="text" id="username" name="username" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" id="password" name="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <button type="submit" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Login</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    class Event {
+        constructor(type, payload) {
+            this.type = type;
+            this.payload = payload;
+        }
+    }
+
+    class SendMessageEvent {
+        constructor(message, from) {
+            this.message = message;
+            this.from = from;
+        }
+    }
+
+    class NewMessageEvent {
+        constructor(message, from, sent) {
+            this.message = message;
+            this.from = from;
+            this.sent = sent;
+        }
+    }
+
+    class ChangeChatroom {
+        constructor(name) {
+            this.name = name;
+        }
+    }
+
+    function routeEvent(event) {
+        if (event.type === undefined) {
+            alert("no type field in the event");
+        }
+        switch (event.type) {
+            case "send_message":
+                console.log("new message");
+                break;
+            case "new_message":
+                const messageEvent = Object.assign(new NewMessageEvent, event.payload);
+                appendChatMessage(messageEvent);
+                break;
+            default:
+                alert("unsupported message");
+                break;
+        }
+    }
+
+    function appendChatMessage(messageEvent) {
+        var date = new Date(messageEvent.sent);
+        const formattedMsg = `${date.toLocaleDateString()}: ${messageEvent.message}`
+
+        textarea = document.getElementById("chatmessages")
+        textarea.value = textarea.value + "\n" + formattedMsg
+        textarea.scrollTop = textarea.scrollHeight
+    }
+
+    function sendEvent(eventName, payload) {
+        const event = new Event(eventName, payload)
+
+        conn.send(JSON.stringify(event));
+    }
+
+    var selectedChat = "general";
+    function changeChatRoom(e) {
+        e.preventDefault();
+        var newchat = document.getElementById("chatroom");
+        if (newchat != null && newchat.value != selectedChat){
+            selectedChat = newchat.value;
+            document.getElementById("chat-header").textContent = "Currently in chatroom: " + selectedChat;
+
+            let changeEvent = new ChangeChatroom(selectedChat);
+            sendEvent("change_room", changeEvent);
+
+            textarea = document.getElementById("chatmessages");
+            textarea.value = `You changed room into: ${selectedChat}`;
+        }
+    }
+
+    function sendMessage(e) {
+        e.preventDefault();
+        var newmessage = document.getElementById("message");
+        if (newmessage != null){
+            let outgoingEvent = new SendMessageEvent(newmessage.value, "admin");
+            sendEvent("send_message", outgoingEvent);
+            newmessage.value = '';
+        }
+    }
+
+    function login(e) {
+        e.preventDefault();
+        let formData = {
+            "username": document.getElementById("username").value,
+            "password": document.getElementById("password").value
+        }
+        fetch("login", {
+            method: "post",
+            body: JSON.stringify(formData),
+            mode: "cors",
+        }).then((res) => {
+            if (res.ok){
+                return res.json();
+            } else {
+                throw "unauthorized";
+            }
+        }).then((data) => {
+            connectWebsocket(data.otp);
+        }).catch((e) => { alert(e)})
+    }
+
+    function connectWebsocket(otp) {
+        if (window["WebSocket"]) {
+            console.log("supports websockets")
+            conn = new WebSocket("wss://" + document.location.host + "/ws?otp=" + otp)
+
+            conn.onopen = function (evt) {
+                document.getElementById("connection-header").textContent = "Connected to Websocket: true"
+            }
+            conn.onclose = function (evt) {
+                document.getElementById("connection-header").textContent = "Connected to Websocket: false"
+                // reconnection
+            }
+            conn.onmessage = function (evt) {
+                const eventData = JSON.parse(evt.data);
+                const event = Object.assign(new Event, eventData);
+
+                routeEvent(event)
+            }
+        } else {
+            alert("browser does not support websockets")
+        }
+    }
+
+    window.onload = function() {
+        document.getElementById("chatroom-selection").onsubmit = changeChatRoom
+        document.getElementById("chatroom-message").onsubmit = sendMessage
+        document.getElementById("login-form").onsubmit = login;
+    }
+</script>
+</body>
 </html>
